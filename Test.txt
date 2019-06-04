@@ -1,1 +1,2 @@
-This is a test document
+This is a test document. Useful source for learning git here 
+https://learn.sparkfun.com/tutorials/using-github-to-share-with-sparkfun/all

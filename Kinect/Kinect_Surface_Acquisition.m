@@ -12,8 +12,9 @@ triggerconfig([colorVid depthVid],'manual');
 counter = 0; % Counts how many manual triggers were initiated
 
 % Setting the frames per trigger
-colorVid.FramesPerTrigger = 25;
-depthVid.FramesPerTrigger = 25;
+frames = 25;
+colorVid.FramesPerTrigger = frames;
+depthVid.FramesPerTrigger = frames;
 
 sample = struct('colorFrameData',[],'colorTimeData',[],'colorMetaData',...
     [],'depthFrameData',[],'depthTimeData',[],'depthMetaData',[]);
@@ -31,6 +32,7 @@ while 1
         % Start the color and depth device. This begins acquisition, but does not
         % start logging of acquired data.
         start([colorVid depthVid]);
+        pause(1); % Allows time for values to normalize
         trigger([colorVid depthVid]); % Trigger the devices to start logging of data.
         
         % Retrieve the acquired data
@@ -46,11 +48,6 @@ clear answer counter;
 stop([colorVid depthVid]);
 
 %%
-% Best depth data at 20.5 in - 28 in
-% Currently at ~24 in away
 
-% % Top left point of 'region of interest' box
-% x_roi = 155;
-% y_roi = 48;
-% width_roi = 309;
-% height_roi = 239;
+
+

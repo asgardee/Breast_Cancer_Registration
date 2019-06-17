@@ -1,7 +1,7 @@
 outlier_thresh = 50;
 outliers = zeros(size(image_slices,4),outlier_thresh);
 
-outliers(1:4,1:2) = [1,2;1,2;1,2;1,2];
+outliers(1:4,1:2) = [1,2;1,4;1,6;1,8];
 
 % Removing the zero terms from the outliers
 temp = nonzeros(outliers);
@@ -15,12 +15,8 @@ if mod(length(temp),4) == 0
             equality(j) = 1;
         end
     end
-
+    
     % If all outliers are at the same point it will be assumed that the
     % remaining outliers will only be at those index positions!
-    if all(equality)
-        pop = 1
-    end
+    if 
 end
-
-disp('end of test')

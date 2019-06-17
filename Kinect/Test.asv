@@ -219,9 +219,16 @@ image_slice = image_slices(:,:,:,1);
 %%
 % Initializing column vectors with zeros
 [X,Y,Z,Z_interp] = deal(zeros(length(ROI_Broad),1));
+% Defining the indicies of the outliers and the maximum amount of outliers
+% allowed in a sample
+outlier_thresh = 50;
+outliers = zeros(size(image_slices,4),outlier_thresh);
 
 % Saving all column vectors for the depth data for each image slice
 for i = 1:size(image_slices,4)
+    disp(i)
+    tstart = tic;
+    
     % Getting the column vector X,Y,Z for slice i
     image_slice = image_slices(:,:,:,i);
     [X_temp,Y_temp,Z_temp] = depth2xyz(image_slice);
@@ -241,16 +248,50 @@ for i = 1:size(image_slices,4)
     time_xyz = toc(time_xyz_start);
     
     % Finding outliers and replacing values with NaN
-    outliers = find(idx == -1)
-    verticies(outliers,:) = NaN;
-    
+    temp = find(idx == -1);
+    if length(temp) > outlier_thresh % Checks if outliers exceed threshold
+        disp('To many outliers, please look at sample data')
+        return
+    elseif i == 4 % Checks to see if all outliers are at the same index
+        for j = 1:length(temp)
+            outliers(i,j) = temp(j);
+        end
+        
+        % Removing the zero terms from the outliers
+        temp = nonzeros(outliers);
+        
+        % Checking if outliers for the data happen at the same index(s)
+        if mod(length(temp),4) == 0
+            temp = reshape(temp,4,length(temp)/4);
+            equality = zeros(1,size(temp,2)); % Checks if column elements are equal
+            for j = 1:size(temp,2)
+                if range(temp(:,j)) == 0
+                    equality(j) = 1;
+                end
+            end
+            
+            % If all outliers are at the same point it will be assumed that the
+            % remaining outliers will only be at those index positions!
+            if all(equality)
+                pop = 1
+            end
+        end
+        
+    else
+        for j = 1:length(temp)
+            outliers(i,j) = temp(j);
+        end
+    end
     % Cubic interpolation for all missing values
-    if ~isempty(outliers)
+    if ~isempty(nonzeros(outliers(i,:)))
+        verticies(nonzeros(outliers(i,:)),:) = NaN;
         verticies_interp = fillmissing(verticies,'spline');
         Z_interp(:,i) = verticies_interp(:,3);
     else
         Z_interp(:,i) = verticies(:,3);
     end
+    
+    telapsed = toc(tstart)
     
 %     % Plotting the nonprocessed data
 %     figure;
@@ -268,15 +309,15 @@ for i = 1:size(image_slices,4)
 %         verticies(:,3));
 %     Z_interp(:,i) = temp.Values;
     
-    % Plotting the processed data
-    figure;
-    scatter3(Y(:,i),Z_interp(:,i),-X(:,i),marker_size,'filled','k')
-    view([45 30]);
-    axis square
-    xlabel('Y')
-    ylabel('Z')
-    zlabel('X')
-    title(sprintf('Interpolated Depth Data for slice %d',i))
+%     % Plotting the processed data
+%     figure;
+%     scatter3(Y(:,i),Z_interp(:,i),-X(:,i),marker_size,'filled','k')
+%     view([45 30]);
+%     axis square
+%     xlabel('Y')
+%     ylabel('Z')
+%     zlabel('X')
+%     title(sprintf('Interpolated Depth Data for slice %d',i))
     
     
 end

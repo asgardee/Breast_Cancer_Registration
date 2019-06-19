@@ -1,4 +1,5 @@
 close all; clc;
+% C:\ProgramData\MATLAB\SupportPackages\R2019a\toolbox\imaq\supportpackages\kinectruntime\+imaq\+internal
 %%
 % Getting the averaged depth data from sample 1
 test_full = sample(1).depthFrameData(:,:,1,:);

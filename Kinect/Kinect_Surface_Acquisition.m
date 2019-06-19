@@ -50,6 +50,12 @@ stop([colorVid depthVid]);
 
 %% Image Pre-Processing
 % help calibrate_kinect
+    % This is the toolbox accompanying our TPAMI 2012 paper - Herrera C., et al.
+    % "Joint depth and color camera calibration with distortion correction", 
+    % TPAMI, 2012. Please cite our paper if you use this toolbox.
+options = calibrate_kinect_options(); % Sets default options for RGB to D
+
+[params,params_error] = calibrate_kinect(options,rgb_grid_p,rgb_grid_x,depth_plane_points,depth_plane_disparity,params0);
 
 %% Straightening out the image
 % Getting all images slices from the first acquisition

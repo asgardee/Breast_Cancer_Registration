@@ -1,0 +1,46 @@
+,Win32,Win64,"Telemed
+Win32","Ultrasonix-5.7
+Win32","Ultrasonix-6.1
+Win32","MTC-3.7
+Win32","Interson-MTC-3.7
+Win32","ThorLabs
+Win32",StealthLink,"spryTrack-Telemed
+Win32","fusionTrack
+Win64",,Need?
+NDI Polaris & Aurora,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,,1
+NDI Ascension,Y,N,Y,Y,Y,Y,Y,Y,Y,Y,N,,0
+NDI Certus,Y,N,Y,Y,Y,Y,Y,Y,Y,Y,N,,0
+MicronTracker (3.7),Y,N,Y,N,N,Y,Y,N,Y,Y,N,,1
+OpticalMarkerTracker,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,Y,,0
+OpenCV Video,Y,Y,Y,Y,Y,Y,Y,Y,N,Y,Y,,0
+Stealthlink,N,N,N,N,N,N,N,N,Y,N,N,,0
+Ultrasonix (5.7),N,N,N,Y,N,N,N,N,N,N,N,,1
+Ultrasonix (6.1),Y,N,N,N,Y,N,N,Y,Y,N,N,,1
+Telemed,N,N,Y,N,N,N,N,N,Y,Y,N,,0
+Interson,N,N,N,N,N,N,Y,N,N,N,N,,0
+Microsoft Media foundation,Y,Y,Y,N,N,Y,Y,N,Y,Y,Y,,0
+Brachy steppers,Y,N,Y,Y,Y,Y,Y,Y,Y,Y,N,,0
+ThorLabs spectrometer,N,N,N,N,N,N,N,Y,N,N,N,,0
+OptiTrack(Motive 1.10.3),Y,N,Y,N,N,Y,Y,Y,N,Y,N,,0
+OptiTrack(Motive 2.1.1),N,Y,N,N,N,N,N,N,N,N,Y,,0
+Intel RealSense,Y,Y,Y,N,N,Y,Y,Y,N,Y,Y,,1
+spryTrack,N,N,N,N,N,N,N,N,N,Y,N,,0
+fusionTrack,N,N,N,N,N,N,N,N,N,N,Y,,0
+,,,,,,,,,,,,,
+,,,,,,,,,,,,,
+,Win32,Win64,"Telemed
+Win32","Ultrasonix-5.7
+Win32","Ultrasonix-6.1
+Win32","MTC-3.7
+Win32","Interson-MTC-3.7
+Win32","ThorLabs
+Win32",StealthLink,"spryTrack-Telemed
+Win32","fusionTrack
+Win64",,Need?
+NDI Polaris & Aurora,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,,1
+MicronTracker (3.7),Y,N,Y,N,N,Y,Y,N,Y,Y,N,,1
+Ultrasonix (5.7),N,N,N,Y,N,N,N,N,N,N,N,,1
+Ultrasonix (6.1),Y,N,N,N,Y,N,N,Y,Y,N,N,,1
+Intel RealSense,Y,Y,Y,N,N,Y,Y,Y,N,Y,Y,,1
+,,,,,,,,,,,,,
+,,,,,,,,,,,,,

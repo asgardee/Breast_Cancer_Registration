@@ -1,8 +1,0 @@
-https://learn.sparkfun.com/tutorials/using-github-to-share-with-sparkfun/all
-** Change to the working directory using the 'cd' command**
-
-git - Gives a summary of commonly used git commands
-git status - Checks status of repo
-git add . - Adds all untracked files to repo
-git commit -m "Attached text" - Commits the changes done by adding and appends text to the commit
-git push -u origin master - Push changes into repo from the master branch

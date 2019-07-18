@@ -1,0 +1,7 @@
+x_offset = 205
+y_offset = 99
+Width = 720
+Height = 802
+
+[r c height width]
+[99 205 802 720]

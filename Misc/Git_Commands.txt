@@ -9,5 +9,6 @@ git pull origin master - Pulls data from the master branch
 git push -u origin master - Push changes into repo from the master branch
 
 git branch - Shows all existing branches in directory
+git branch -d <branch_name> - Deletes branch <branch_name>
 git checkout <branch_name> - Changes current branch to branch_name
 git checkout -b <new_branch> - Creates new branch named <new_branch>

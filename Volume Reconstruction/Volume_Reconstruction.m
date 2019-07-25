@@ -3,6 +3,13 @@ clearvars; close all; clc;
 
 %% Script definitions
 depth_frame_inspect = 0; % Change to 1 to inspect depth frame
+save_data = 0; % Save data to US_Data
+Visual = 0; % Set to one to see visualization of slices
+full_range = 1; % Set to one to assign pixel intensity values from 0-255
+    % Set to one to differentiate between 0 intensity voxels and 
+    % outer points
+only_image_data = 0;
+
 Volume_dim_buffer = 5; % Buffer for the shell of the phantom in mm
 % Shrinks the size of the shell. Value of 1 means no lose of information.
 % 0 < pixel_space_rat <= 1
@@ -12,8 +19,11 @@ pixel_space_rat = 1;
 % Loading the US_data from the current folder
 filename = dir('*.mat');
 for i = 1:length(filename)
-    if contains(filename(i).name,'Force')
+    if contains(filename(i).name,'_Force')
+        tic;
         load(filename(i).name);
+        telapsed = round(toc);
+        fprintf('It took %d seconds to open US_Data_oneForce.\n\n',telapsed)
     end
 end
 
@@ -21,13 +31,39 @@ end
 x_roi = [106,890];
 y_roi = [366,761];
 for i = 1:length(US_Data_oneForce)
-    US_Data_oneForce(i).Index = i;
-    US_Data_oneForce(i).US_Image = US_Data_oneForce(i).US_Image(...
-        x_roi(1):x_roi(2),y_roi(1):y_roi(2));
+    US_Data_oneForce(i).Index = i; %#ok<*SAGROW>
+    US_Data_oneForce(i).US_Image = uint8(round(255*US_Data_oneForce(i)...
+        .US_Image(x_roi(1):x_roi(2),y_roi(1):y_roi(2))));
+    
+    % Finding minimum and maximum pixel intensity values
+    if i == 1
+        min_intensity = min(min(US_Data_oneForce(i).US_Image));
+        max_intensity = max(max(US_Data_oneForce(i).US_Image));
+    else
+        if min(min(US_Data_oneForce(i).US_Image)) < min_intensity
+            min_intensity = min(min(US_Data_oneForce(i).US_Image));
+        end
+        if max(max(US_Data_oneForce(i).US_Image)) > max_intensity
+            max_intensity = max(max(US_Data_oneForce(i).US_Image));
+        end
+    end
+    
     % Converting from meters to mm
     US_Data_oneForce(i).X_pos = US_Data_oneForce(i).X_pos*1000;
     US_Data_oneForce(i).Y_pos = US_Data_oneForce(i).Y_pos*1000;
     US_Data_oneForce(i).Z_pos = US_Data_oneForce(i).Z_pos*1000;
+end
+
+if full_range
+    if min_intensity == 0
+        for i = 1:length(US_Data_oneForce)
+            US_Data_oneForce(i).US_Image = round((255/max_intensity)*...
+                US_Data_oneForce(i).US_Image);
+        end
+    else
+        disp('Expected minimum intensity to be 0. Program ended early.')
+        return
+    end
 end
 US_Data = US_Data_oneForce;
 clear US_Data_oneForce
@@ -47,8 +83,8 @@ end
 US_Depth_Frame = US_Depth_Frame(x_roi(1):x_roi(2),y_roi(1):y_roi(2));
 
 % Manual inspection for pixels in image
-if depth_frame_inspect 
-    imtool(US_Depth_Frame)
+if depth_frame_inspect
+    imtool(US_Depth_Frame)  %#ok<*UNRCH>
 end
 clear depth_frame_inspect i
 
@@ -61,25 +97,185 @@ pixel_spacing_x = probe_w/image_w; % Width of each pixel in mm
 pixel_spacing_y = phantom_h/image_h; % length of each pixel in mm
 % image_h_mm = pixel_spacing_y*size(US_Depth_Frame,1);
 % image_w_mm = probe_w;
-Image_char = imref2d(size(US_Depth_Frame),pixel_spacing_x,pixel_spacing_y);
-imshow(US_Depth_Frame,Image_char)
-
-%% Creating the shell for the 3D volume reconstruction
-% Defining mold size and volume of 3D shell
-mold_diameter = 146;
-Volume_dim_mm = [mold_diameter + Volume_dim_buffer,...
-    mold_diameter + Volume_dim_buffer,...
-    size(US_Depth_Frame,1)*pixel_spacing_y + Volume_dim_buffer];
-
-% Converting mm values to pixel values
-pixel_spacing_x_big = pixel_spacing_x/pixel_space_rat;
-pixel_spacing_y_big = pixel_spacing_y/pixel_space_rat;
-Volume_dim_pixel = [round(Volume_dim_mm(1)/pixel_spacing_x_big),...
-    round(Volume_dim_mm(2)/pixel_spacing_x_big),...
-    round(Volume_dim_mm(3)/pixel_spacing_y_big)];
-
-% Creating the shell to store the pixel values
-US_Volume = -1*ones(Volume_dim_pixel,'int16');
+% Image_char = imref2d(size(US_Depth_Frame),pixel_spacing_x,pixel_spacing_y);
+% imshow(US_Depth_Frame,Image_char)
 
 %%
+% Defining the X, Y, Z position vectors for the image
+X_image_vals = -20:pixel_spacing_x:20;
+Y_image_vals = 0 : -pixel_spacing_y : ...
+    -size(US_Depth_Frame,1)*pixel_spacing_y+pixel_spacing_y;
+[X_image,Y_image,Z_image] = ...
+    deal(zeros(length(X_image_vals)*length(Y_image_vals),1));
+count = 0;
+for i = 1:length(X_image_vals)
+    for j = 1:length(Y_image_vals)
+        count = count + 1;
+        X_image(count) = X_image_vals(i);
+        Y_image(count) = Y_image_vals(j);
+    end
+end
+
+% Finding location of minimum point in image
+min_x = min(abs(X_image_vals));
+Volume_vector = [X_image,Y_image,Z_image];
+min_index = find(Volume_vector(:,1) == min_x & Volume_vector(:,2) == 0);
+
+%%
+% Cycling through all images
+for i = 1:length(US_Data)
+    % Rotation matrix using Euler angles
+    alph = US_Data(i).Roll;
+    bet = US_Data(i).Pitch;
+    gam = US_Data(i).Yaw;
+    rot_mat = RotMatrix(alph,bet,gam);
+    % Position vector representing translational offset
+    pos_mat = [US_Data(i).X_pos;US_Data(i).Y_pos;US_Data(i).Z_pos];
+    
+    % Applying the rotation to the pixel points
+    % The Y dimension in the image frame is the Z direction in robot frame
+    Volume_vector = [Z_image,X_image,Y_image]*rot_mat;
+    % Applying the translation to the pixel points
+    Volume_vector(:,1) = Volume_vector(:,1) + pos_mat(1);
+    Volume_vector(:,2) = Volume_vector(:,2) + pos_mat(2);
+    Volume_vector(:,3) = Volume_vector(:,3) + pos_mat(3);
+    % Adding in the intensity values for the given x,y,z position
+    image_slice = US_Data(i).US_Image.';
+    Volume_vector(:,4) = image_slice(:);
+    
+    % Saving data to US_Data structure
+    US_Data(i).US_Volume = Volume_vector;
+end
+
+% Saving the output file
+if save_data
+    clear filename image_slice US_Depth_Frame Volume_vector X_image...
+        X_image_vals Y_image Y_image_vals Z_image
+    filename = strcat(pwd,'\2019-07-10T11-20-44_TransForce_12.mat');
+    tic;
+    save(filename,'US_Data','-v7.3')
+    telapsed = round(toc);
+    fprintf('Took %d seconds to save transformed points.\n\n',telapsed)
+end
+
+%% Initializing and filling variable to translated points
+Im_rows = size(US_Data(1).US_Volume,1);
+Im_cols = size(US_Data(1).US_Volume,2);
+US_Images_Trans = zeros(Im_rows*length(US_Data),Im_cols,'single');
+for i = 1:length(US_Data)
+    US_Images_Trans(Im_rows*i-Im_rows+1:Im_rows*i,:) = US_Data(i).US_Volume;
+end
+
+%% Visualization of slices
+if Visual
+    Visualization
+end
+
+%% Saving the output file
+if save_data
+    filename = strcat(pwd,'\2019-07-10T11-20-44_OnlyTransForce_12.mat');
+    tic;
+    save(filename,'US_Images_Trans','-v7.3')
+    telapsed = round(toc);
+    fprintf('Took %d seconds to save transformed points.\n\n',telapsed)
+end
+clear filename image_slice US_Data US_Depth_Frame Volume_vector X_image...
+    X_image_vals Y_image Y_image_vals Z_image
+
+%% Creating the shell for the 3D volume reconstruction
+% Edge length [mm] of voxel cube
+pixel_spacing_decimals = 3;
+pixel_spacing = round(min([pixel_spacing_x,pixel_spacing_y,1]),...
+    pixel_spacing_decimals);
+
+Unique_intensities = length(unique(US_Images_Trans(:,4)));
+fprintf('%d unique original pixel intensity values.\n\n',...
+    Unique_intensities)
+US_Images_Trans = round(US_Images_Trans,...
+    pixel_spacing_decimals);
+% US_Images_Trans = sortrows(US_Images_Trans,1:3);
+
+x_min_mm = min(US_Images_Trans(:,1));
+y_min_mm = min(US_Images_Trans(:,2));
+z_min_mm = min(US_Images_Trans(:,3));
+
+% Breadth of pixels in [mm]
+x_width = max(US_Images_Trans(:,1)) - x_min_mm;
+% Mapping (x = 1:961): min(US_Images_Trans(:,1)) + pixel_spacing*(x - 1)
+y_width = max(US_Images_Trans(:,2)) - y_min_mm;
+% Mapping (y = 1:1553): min(US_Images_Trans(:,2)) + pixel_spacing*(y - 1)
+z_width = max(US_Images_Trans(:,3)) - z_min_mm;
+% Mapping (z = 1:986): min(US_Images_Trans(:,3)) + pixel_spacing*(z - 1)
+
+% Dimensions of 3D volume
+Volume_dim = [ceil(x_width/pixel_spacing)+1,...
+    ceil(y_width/pixel_spacing)+1,...
+    ceil(z_width/pixel_spacing)+1];
+
+% Creating shell for US volume
+US_Volume = -1*ones(Volume_dim,'uint8');
+
+%Filling in volume
+count = 1;
+overlap_struct = struct('x_pos',[],'y_pos',[],'z_pos',[],'Values',[]);
+tic;
+for i = 1:length(US_Images_Trans(:,1))
+    x_pos = round((US_Images_Trans(i,1) - x_min_mm)/pixel_spacing + 1);
+    y_pos = round((US_Images_Trans(i,2) - y_min_mm)/pixel_spacing + 1);
+    z_pos = round((US_Images_Trans(i,3) - z_min_mm)/pixel_spacing + 1);
+    
+    % Sanity check to see how fast it is going
+    if mod(i,1000000) == 0
+        telapsed = round(toc);
+        fprintf('Took %d seconds for %d.\n\n',telapsed,i)
+        tic;
+    end
+    
+    % Checks to see if US_Volume position is empty
+    if US_Volume(x_pos,y_pos,z_pos) == -1
+        US_Volume(x_pos,y_pos,z_pos) = US_Images_Trans(i,4);
+    else
+        % Checks to see if the overlap structure is empty
+        if isempty(overlap_struct(1).x_pos)
+            % Puts overlapping intensity values into a storage variable
+            overlap_struct(count).x_pos = x_pos;
+            overlap_struct(count).y_pos = y_pos;
+            overlap_struct(count).z_pos = z_pos;
+            overlap_struct(count).Values = ...
+                [US_Volume(x_pos,y_pos,z_pos), US_Images_Trans(i,4)];
+            repeat_index = [x_pos,y_pos,z_pos];
+        else
+            % Checks to see if there is already an index value with
+            % multiple intensity values that matches the x,y,z values
+            repeat = find(repeat_index(:,1) == x_pos &...
+                repeat_index(:,2) == y_pos &...
+                repeat_index(:,3) == z_pos);
+            % Creates new row in overlap structure if no matching repeat
+            % index
+            if isempty(repeat)
+                count = count + 1;
+                overlap_struct(count).x_pos = x_pos;
+                overlap_struct(count).y_pos = y_pos;
+                overlap_struct(count).z_pos = z_pos;
+                overlap_struct(count).Values = ...
+                    [US_Volume(x_pos,y_pos,z_pos), US_Images_Trans(i,4)];
+                repeat_index = [repeat_index; x_pos,y_pos,z_pos]; %#ok<AGROW>
+            % Adds extra intensity value to overlap structure
+            else
+                overlap_struct(repeat).Values = ...
+                    [overlap_struct(repeat).Values, US_Images_Trans(i,4)];
+            end
+        end
+    end
+end
+
+% if only_image_data
+%     US_Volume = -1*ones(Volume_dim,'int16');
+% else
+%     US_Volume = zeros(Volume_dim,'int16');
+% end
+
+%%
+% % Turns the 3D Volume into its vector components
+% [X,Y,Z,Val] = Volume2Vector(US_Volume);
 

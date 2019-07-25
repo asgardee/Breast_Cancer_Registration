@@ -8,6 +8,8 @@ Visual = 0; % Set to one to see visualization of slices
 full_range = 1; % Set to one to assign pixel intensity values from 0-255
     % Set to one to differentiate between 0 intensity voxels and 
     % outer points
+max_overlap_val = 20; % Assumption that the maximum overlapping intensities
+    % in one voxel will be max_overlap_val
 only_image_data = 0;
 
 Volume_dim_buffer = 5; % Buffer for the shell of the phantom in mm
@@ -207,73 +209,175 @@ y_width = max(US_Images_Trans(:,2)) - y_min_mm;
 z_width = max(US_Images_Trans(:,3)) - z_min_mm;
 % Mapping (z = 1:986): min(US_Images_Trans(:,3)) + pixel_spacing*(z - 1)
 
+% Translating x,y,z positions to cell positions
+US_Images_Trans(:,1) = round((US_Images_Trans(:,1)...
+    - x_min_mm)/pixel_spacing + 1);
+US_Images_Trans(:,2) = round((US_Images_Trans(:,2)...
+    - y_min_mm)/pixel_spacing + 1);
+US_Images_Trans(:,3) = round((US_Images_Trans(:,3)...
+    - z_min_mm)/pixel_spacing + 1);
+US_Images_Trans = sortrows(US_Images_Trans,1:3);
+
+%% Finding all duplicate cell positions in matrix
+[~,Unique_Index,~] =...
+    unique(US_Images_Trans(:,1:3), 'rows', 'first');
+% Casting to smaller sizes to help with memory
+Duplicate_Rows = int32(setdiff(1:size(US_Images_Trans,1),Unique_Index));
+Duplicate_Row_Vals = unique(US_Images_Trans(Duplicate_Rows,1:3),'rows');
+unique_duplicates = size(Duplicate_Row_Vals,1);
+US_Images_Trans = int32(US_Images_Trans);
+% First 3 columns of matrix represent x,y,z cells, the 4th column
+% represents the number of repeated values and the other cells are the
+% values in the cells
+overlap_matrix_1 = -1*ones(floor(unique_duplicates/2),13,'int16');
+clear Unique_Index Duplicate_Row_Vals
+
+% Filling in all unique values using averaging
+old_row = 1;
+overlap_mat_size = size(overlap_matrix_1,1);
+count = 0;
+for i = 1:length(Duplicate_Rows)
+    % Checks to see if new duplicate equals old duplicate value
+    if ~all(US_Images_Trans(old_row,1:3) == ...
+            US_Images_Trans(Duplicate_Rows(i),1:3))
+        count = count + 1;
+        repeat = find(US_Images_Trans(Duplicate_Rows(i)-1,1) == ...
+            US_Images_Trans(Duplicate_Rows(i)-1:Duplicate_Rows(i)-2+max_overlap_val,1) &...
+            US_Images_Trans(Duplicate_Rows(i)-1,2) ==...
+            US_Images_Trans(Duplicate_Rows(i)-1:Duplicate_Rows(i)-2+max_overlap_val,2) &...
+            US_Images_Trans(Duplicate_Rows(i)-1,3) ==...
+            US_Images_Trans(Duplicate_Rows(i)-1:Duplicate_Rows(i)-2+max_overlap_val,3));
+        
+        overlap_matrix_1(count,1) = US_Images_Trans(Duplicate_Rows(i)-1,1);
+        overlap_matrix_1(count,2) = US_Images_Trans(Duplicate_Rows(i)-1,2);
+        overlap_matrix_1(count,3) = US_Images_Trans(Duplicate_Rows(i)-1,3);
+        overlap_matrix_1(count,4) = length(repeat);
+        overlap_matrix_1(count,5) = US_Images_Trans(Duplicate_Rows(i)-1,4);
+        
+        for j = 2:overlap_matrix_1(count,4)
+            overlap_matrix_1(count,4+j) = US_Images_Trans(Duplicate_Rows(i)+int32(j)-2,4);
+        end
+        if count > overlap_mat_size
+            old_row = Duplicate_Rows(i);
+            break
+        end
+    end
+    old_row = Duplicate_Rows(i);
+end
+
+if save_data
+    filename = strcat(pwd,'\2019-07-10T11-20-44_Overlap1VoxelForce_12.mat');
+    tic;
+    save(filename,'overlap_matrix_1','-v7.3')
+    telapsed = round(toc);
+    fprintf('Took %d seconds to save transformed points.\n\n',telapsed)
+end
+
+overlap_matrix_2 = -1*ones(ceil(unique_duplicates/2),13,'int16');
+count = 0;
+for i = i:length(Duplicate_Rows)
+    % Checks to see if new duplicate equals old duplicate value
+    if ~all(US_Images_Trans(old_row,1:3) == ...
+            US_Images_Trans(Duplicate_Rows(i),1:3))
+        count = count + 1;
+        repeat = find(US_Images_Trans(Duplicate_Rows(i)-1,1) == ...
+            US_Images_Trans(Duplicate_Rows(i)-1:Duplicate_Rows(i)-2+max_overlap_val,1) &...
+            US_Images_Trans(Duplicate_Rows(i)-1,2) ==...
+            US_Images_Trans(Duplicate_Rows(i)-1:Duplicate_Rows(i)-2+max_overlap_val,2) &...
+            US_Images_Trans(Duplicate_Rows(i)-1,3) ==...
+            US_Images_Trans(Duplicate_Rows(i)-1:Duplicate_Rows(i)-2+max_overlap_val,3));
+        
+        overlap_matrix_2(count,1) = US_Images_Trans(Duplicate_Rows(i)-1,1);
+        overlap_matrix_2(count,2) = US_Images_Trans(Duplicate_Rows(i)-1,2);
+        overlap_matrix_2(count,3) = US_Images_Trans(Duplicate_Rows(i)-1,3);
+        overlap_matrix_2(count,4) = length(repeat);
+        overlap_matrix_2(count,5) = US_Images_Trans(Duplicate_Rows(i)-1,4);
+        
+        for j = 2:overlap_matrix_2(count,4)
+            overlap_matrix_2(count,4+j) = US_Images_Trans(Duplicate_Rows(i)+int32(j)-2,4);
+        end
+    end
+    old_row = Duplicate_Rows(i);
+end
+clear Duplicate_Rows
+
+if save_data
+    filename = strcat(pwd,'\2019-07-10T11-20-44_Overlap2VoxelForce_12.mat');
+    tic;
+    save(filename,'overlap_matrix_2','-v7.3')
+    telapsed = round(toc);
+    fprintf('Took %d seconds to save transformed points.\n\n',telapsed)
+end
+
+%% Creating new structure with only unique data
+[Unique_US_Images_Trans(:,1:3),Unique_Index,~] =...
+    unique(US_Images_Trans(:,1:3), 'rows', 'first');
+Unique_US_Images_Trans = int16(Unique_US_Images_Trans);
+Unique_US_Images_vals = uint8(US_Images_Trans(Unique_Index,4));
+clear Unique_Index US_Images_Trans
+
+overlap_matrix_1_end = find(Unique_US_Images_Trans(:,1) ==...
+    overlap_matrix_1(end,1) & Unique_US_Images_Trans(:,2) ==...
+    overlap_matrix_1(end,2) & Unique_US_Images_Trans(:,3) ==...
+    overlap_matrix_1(end,3));
+
+%% Using averaging to fill in voxel values
+count = 1;
+for i = 1:overlap_matrix_1_end
+    overlap_voxel = all(Unique_US_Images_Trans(i,1) ==...
+            overlap_matrix_1(count,1) & Unique_US_Images_Trans(i,2) ==...
+            overlap_matrix_1(count,2) & Unique_US_Images_Trans(i,3) ==...
+            overlap_matrix_1(count,3));
+    if overlap_voxel
+        repeat_num = overlap_matrix_1(count,4);
+        Unique_US_Images_vals(i) = round(sum(...
+            overlap_matrix_1(count,5:repeat_num+4))/repeat_num);
+        count = count + 1;
+    end
+end
+clear overlap_matrix_1
+
+count = 1;
+for i = overlap_matrix_1_end+1:size(Unique_US_Images_Trans,1)
+    overlap_voxel = all(Unique_US_Images_Trans(i,1) ==...
+            overlap_matrix_2(count,1) & Unique_US_Images_Trans(i,2) ==...
+            overlap_matrix_2(count,2) & Unique_US_Images_Trans(i,3) ==...
+            overlap_matrix_2(count,3));
+    if overlap_voxel
+        repeat_num = overlap_matrix_2(count,4);
+        Unique_US_Images_vals(i) = round(sum(...
+            overlap_matrix_2(count,5:repeat_num+4))/repeat_num);
+        count = count + 1;
+    end 
+end
+clear overlap_matrix_2
+
+%%
 % Dimensions of 3D volume
 Volume_dim = [ceil(x_width/pixel_spacing)+1,...
     ceil(y_width/pixel_spacing)+1,...
     ceil(z_width/pixel_spacing)+1];
 
-% Creating shell for US volume
-US_Volume = -1*ones(Volume_dim,'uint8');
-
-%Filling in volume
-count = 1;
-overlap_struct = struct('x_pos',[],'y_pos',[],'z_pos',[],'Values',[]);
-tic;
-for i = 1:length(US_Images_Trans(:,1))
-    x_pos = round((US_Images_Trans(i,1) - x_min_mm)/pixel_spacing + 1);
-    y_pos = round((US_Images_Trans(i,2) - y_min_mm)/pixel_spacing + 1);
-    z_pos = round((US_Images_Trans(i,3) - z_min_mm)/pixel_spacing + 1);
-    
-    % Sanity check to see how fast it is going
-    if mod(i,1000000) == 0
-        telapsed = round(toc);
-        fprintf('Took %d seconds for %d.\n\n',telapsed,i)
-        tic;
-    end
-    
-    % Checks to see if US_Volume position is empty
-    if US_Volume(x_pos,y_pos,z_pos) == -1
-        US_Volume(x_pos,y_pos,z_pos) = US_Images_Trans(i,4);
-    else
-        % Checks to see if the overlap structure is empty
-        if isempty(overlap_struct(1).x_pos)
-            % Puts overlapping intensity values into a storage variable
-            overlap_struct(count).x_pos = x_pos;
-            overlap_struct(count).y_pos = y_pos;
-            overlap_struct(count).z_pos = z_pos;
-            overlap_struct(count).Values = ...
-                [US_Volume(x_pos,y_pos,z_pos), US_Images_Trans(i,4)];
-            repeat_index = [x_pos,y_pos,z_pos];
-        else
-            % Checks to see if there is already an index value with
-            % multiple intensity values that matches the x,y,z values
-            repeat = find(repeat_index(:,1) == x_pos &...
-                repeat_index(:,2) == y_pos &...
-                repeat_index(:,3) == z_pos);
-            % Creates new row in overlap structure if no matching repeat
-            % index
-            if isempty(repeat)
-                count = count + 1;
-                overlap_struct(count).x_pos = x_pos;
-                overlap_struct(count).y_pos = y_pos;
-                overlap_struct(count).z_pos = z_pos;
-                overlap_struct(count).Values = ...
-                    [US_Volume(x_pos,y_pos,z_pos), US_Images_Trans(i,4)];
-                repeat_index = [repeat_index; x_pos,y_pos,z_pos]; %#ok<AGROW>
-            % Adds extra intensity value to overlap structure
-            else
-                overlap_struct(repeat).Values = ...
-                    [overlap_struct(repeat).Values, US_Images_Trans(i,4)];
-            end
-        end
-    end
+if only_image_data
+    US_Volume = -1*ones(Volume_dim,'uint8');
+else
+    US_Volume = zeros(Volume_dim,'uint8');
 end
 
-% if only_image_data
-%     US_Volume = -1*ones(Volume_dim,'int16');
-% else
-%     US_Volume = zeros(Volume_dim,'int16');
-% end
+%Filling in volume
+for i = 1:length(Unique_US_Images_vals)
+    US_Volume(Unique_US_Images_Trans(i,1),Unique_US_Images_Trans(i,2),...
+        Unique_US_Images_Trans(i,3)) = Unique_US_Images_vals(i);
+end
+clearvars -except US_Volume
+
+if save_data
+    filename = strcat(pwd,'\2019-07-10T11-20-44_US_Volume_Averaged.mat');
+    tic;
+    save(filename,'US_Volume','-v7.3')
+    telapsed = round(toc);
+    fprintf('Took %d seconds to save US Volume.\n\n',telapsed)
+end
 
 %%
 % % Turns the 3D Volume into its vector components

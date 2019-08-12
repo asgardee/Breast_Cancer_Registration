@@ -1,5 +1,5 @@
 % Running the simulation
-Sim_name = 'US_Image_Acquire_Trigger';
+Sim_name = 'US_Image_Acquire_Trigger_V2';
 fprintf('Starting simulation %d of %d\n',Cur_exp_num,Tot_exp_num)
 tic;
 sim(Sim_name)

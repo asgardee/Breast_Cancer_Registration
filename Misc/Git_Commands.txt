@@ -12,3 +12,6 @@ git branch - Shows all existing branches in directory
 git branch -d <branch_name> - Deletes branch <branch_name>
 git checkout <branch_name> - Changes current branch to branch_name
 git checkout -b <new_branch> - Creates new branch named <new_branch>
+
+git reset --hard HEAD^ - Removes the last commit from git
+git reset --hard HEAD~<num> - Removes the <num> commits from git

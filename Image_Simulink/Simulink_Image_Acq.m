@@ -10,6 +10,14 @@ Tot_exp_num = 8;
 % THIS DOES NOT CHANGE IMAGE ACQUISITION SAMPLE TIME
 Sam_time = 0.034;
 UDP_in = 12;
+    X_min = 366;
+    Y_min = 107;
+    X_max = 761;
+    Y_max = 890;
+ROI_pos = [Y_min X_min Y_max- Y_min X_max-X_min];
+% fprintf('[%d %d %d %d]\n\n',ROI_pos)
+clear X_min Y_min X_max Y_max
+    
 
 % % UNCOMMENT FOR SINGLE EXPIRIMENT ACQUISITION
 % US_Capture(Cur_exp_num,Tot_exp_num)

@@ -1,0 +1,92 @@
+<PlusConfiguration version="2.1">
+  <DataCollection StartupDelaySec="1.0">
+    <DeviceSet 
+      Name="PlusServer: NDI Aurora trackers"
+      Description="Broadcasting tool tracking data through OpenIGTLink
+      Tracking three 6DOF EM trackers (080061)." />
+
+	<Device
+      Id="EmTracker" 
+      Type="AuroraTracker"
+      SerialPort="5" 
+      BaudRate="115200"
+      AcquisitionRate="50"
+      LocalTimeOffsetSec="0.0"
+      ToolReferenceFrame="EmTracker" > <!-- SerialPort = COM port number (check "Device Manager/Ports") -->
+      <DataSources>
+        <DataSource 
+			Type="Tool" 
+			Id="Reference" 
+			RomFile="DDRO-080-061-01_GENERIC.rom"
+			BufferSize="500"
+			AveragedItemsForFiltering="20"
+			PortName="0" 
+		/> <!-- PortName relates to physical port 1 -->
+		<DataSource 
+			Type="Tool" 
+			Id="US_Probe" 
+			RomFile="DDRO-080-061-01_GENERIC.rom"
+			BufferSize="500"
+			AveragedItemsForFiltering="20"
+			PortName="1" 
+		/> <!-- PortName relates to physical port 2 -->
+		<DataSource 
+			Type="Tool" 
+			Id="Needle_Base" 
+			RomFile="DDRO-080-061-01_GENERIC.rom"
+			BufferSize="500"
+			AveragedItemsForFiltering="20"
+			PortName="2" 
+		/> <!-- PortName relates to physical port 3 -->
+      </DataSources>
+      <OutputChannels>
+        <OutputChannel Id="EmTrackerStream">
+          <DataSource Id="Reference" />
+		  <DataSource Id="US_Probe" />
+		  <DataSource Id="Needle_Base" />
+        </OutputChannel>
+      </OutputChannels>
+    </Device>
+  </DataCollection>
+  
+  <!-- Transformations for sensors and US Image -->
+  <CoordinateDefinitions>
+    <Transform From="Reference" To="Reference_Shift"
+      Matrix="
+        1 0 0 0.0
+        0 1 0 0.0
+        0 0 1 95.5        
+        0 0 0 1" />
+	
+	<Transform From="Needle_Tip" To="Needle_Base"
+      Matrix="
+        1 0 0 0
+        0 1 0 0
+        0 0 1 75        
+        0 0 0 1"  />
+	   
+  </CoordinateDefinitions>
+  
+  <PlusOpenIGTLinkServer 
+    MaxNumberOfIgtlMessagesToSend="1" 
+    MaxTimeSpentWithProcessingMs="50" 
+    ListeningPort="18944" 
+    SendValidTransformsOnly="true" 
+    OutputChannelId="EmTrackerStream" > 
+    <DefaultClientInfo> 
+      <MessageTypes> 
+        <Message Type="TRANSFORM" />
+      </MessageTypes>
+      <TransformNames> 
+        <Transform Name="ReferenceToEmTracker" />
+        <Transform Name="US_ProbeToEmTracker" />
+        <Transform Name="Needle_BaseToEmTracker" />      
+		<!-- Transform between reference sensor and other sensors -->
+		<Transform Name="US_ProbeToReference_Shift" /> 
+		<Transform Name="Needle_BaseToReference_Shift" /> 	
+		<Transform Name="Needle_TipToReference_Shift" /> 
+		<Transform Name="Needle_TipToNeedle_Base_Shift" /> 		
+      </TransformNames>
+    </DefaultClientInfo>
+  </PlusOpenIGTLinkServer>
+</PlusConfiguration>

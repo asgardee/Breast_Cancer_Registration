@@ -55,7 +55,7 @@
       Matrix="
         1 0 0 0.0
         0 1 0 0.0
-        0 0 1 95.5        
+        0 0 1 100        
         0 0 0 1" />
 	
 	<Transform From="Needle_Tip" To="Needle_Base"

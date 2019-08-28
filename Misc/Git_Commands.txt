@@ -8,6 +8,8 @@ git commit -m "Attached text" - Commits the changes done by adding and appends t
 git pull origin master - Pulls data from the master branch
 git push -u origin master - Push changes into repo from the master branch
 
+[Esc] :wq [Enter] - Exits a Vim editor (happens when you forget to add a comment to a commit)
+
 git branch - Shows all existing branches in directory
 git branch -d <branch_name> - Deletes branch <branch_name>
 git checkout <branch_name> - Changes current branch to branch_name

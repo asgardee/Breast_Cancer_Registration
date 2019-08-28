@@ -19,7 +19,7 @@
       <DataSources>
         <DataSource 
 			Type="Tool" 
-			Id="Reference" 
+			Id="Ref_Offset" 
 			RomFile="DDRO-080-061-01_GENERIC.rom"
 			BufferSize="500"
 			AveragedItemsForFiltering="20"
@@ -44,7 +44,7 @@
       </DataSources>
       <OutputChannels>
         <OutputChannel Id="EmTrackerStream">
-          <DataSource Id="Reference" />
+          <DataSource Id="Ref_Offset" />
 		  <DataSource Id="US_Probe" />
 		  <DataSource Id="Needle_Base" />
         </OutputChannel>
@@ -55,6 +55,7 @@
     <Device
       Id="VideoDevice" 
       Type="Epiphan" 
+	  AcquisitionRate="30" 
 	  ImageToTransducerTransformName="ImageToTransducer" >
       <DataSources>
         <DataSource 
@@ -102,20 +103,29 @@
   
   <!-- Transformations for sensors and US Image -->
   <CoordinateDefinitions>
-    <Transform From="Image" To="US_Probe"
+  
+	<Transform From="Ref_Offset" To="Reference"
       Matrix="
-        0.2 0.0 0.0 0.0
-        0.0 0.2 0.0 0.0
-        0.0 0.0 0.2 0.0        
+        1 0 0 0
+        0 1 0 0
+        0 0 1 100        
         0 0 0 1" />
 	
-	<Transform From="Needle_Tip" To="Needle_Base"
+	<Transform From="Image" To="Reference"
       Matrix="
-        1 0 0.000203823 0.0180449
-        3.31529e-09 -1  -1.62655e-05  -0.00144002
-        0.000203823 1.62655e-05 -1  -88.5321
-        0 0 0 1"
-       Error="0.554951" Date="012617_105449" />
+        0.1012658 0 0 0
+        0 0.08495821 0 0
+        0 0 1 0        
+        0 0 0 1" />
+	
+	<!-- 
+    <Transform From="Image" To="US_Probe"
+      Matrix="
+        0.1 0 0 0
+        0 0.085 0 0
+        0 0 1 0        
+        0 0 0 1" />
+	-->
 	   
   </CoordinateDefinitions>
   
@@ -131,18 +141,21 @@
 		<Message Type="IMAGE" />
       </MessageTypes>
       <TransformNames> 
-        <!-- Transform to ToolReferenceFrame -->
+        <!-- Transform to ToolReferenceFrame 
 		<Transform Name="ReferenceToEmTracker" />
         <Transform Name="US_ProbeToEmTracker" />
-        <Transform Name="Needle_BaseToEmTracker" />    
+        <Transform Name="Needle_BaseToEmTracker" /> 
+		-->
 		<!-- Transform between reference sensor and other sensors -->
 		<Transform Name="US_ProbeToReference" /> 
 		<Transform Name="Needle_BaseToReference" /> 
-		<Transform Name="Needle_TipToReference" /> 
-		<Transform Name="Needle_TipToNeedle_Base" /> 
+		<Transform Name="Needle_BaseToUS_Probe" /> 
+		<!-- <Transform Name="Needle_TipToReference" /> 
+		<Transform Name="Needle_TipToNeedle_Base" /> -->
       </TransformNames>
 	  <ImageNames>
-        <Image Name="Image" EmbeddedTransformToFrame="Reference" />
+        <!-- <Image Name="Image" EmbeddedTransformToFrame="Reference" /> -->
+		<Image Name="Image" EmbeddedTransformToFrame="Reference" />
       </ImageNames>
     </DefaultClientInfo>
   </PlusOpenIGTLinkServer>

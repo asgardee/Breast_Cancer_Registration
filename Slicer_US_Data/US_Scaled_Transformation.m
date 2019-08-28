@@ -1,0 +1,31 @@
+clc
+
+% Original transformation matrix provided by slicer
+fileID = fopen('ImageToUS_Probe.txt','r');
+formatSpec = '%f';
+size_T = [4 4];
+T_orig = fscanf(fileID,formatSpec,size_T).';
+
+Sx = 0.1012658; % Pixel spacing along x axis in [mm]
+Sy = 0.08495821; % Pixel spacing along y axis in [mm]
+
+%%
+R = T_orig(1:3,1:3); % Rotational part of transformation matrix
+
+S = diag([Sx;Sy;1]); % Scaling matrix
+
+RS = R*S; % Applying the scalining of the image to the rotation
+
+% Outputting the scaled transformation matrix
+T_scaled = T_orig;
+T_scaled(1:3,1:3) = RS;
+disp("The scaled transform from Image to US_Probe is:")
+fprintf("\n")
+
+for i = 1:4
+    for j = 1:4
+        fprintf("%0.7f ",T_scaled(i,j))
+    end
+    fprintf("\n")
+end
+    
